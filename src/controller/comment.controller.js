@@ -6,9 +6,38 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 // Get all comments for a specific video
 const getVideoComments = asyncHandler(async (req, res) => {
-  
+  const { videoId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
 
-  res.status(200).json(new ApiResponse(200, "Comments fetched successfully", comments));
+  // Validate the videoId
+  if (!mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiError(400, "Invalid video ID");
+  }
+
+  const comments = await Comment.aggregate([
+    { $match: { video: videoId } },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+      },
+    },
+    { $unwind: "$ownerDetails" },
+    {
+      $project: {
+        content: 1,
+        "ownerDetails.username": 1,
+        "ownerDetails.avatar": 1,
+        createdAt: 1,
+      },
+    },
+  ])
+  
+  const result = await Comment.aggregatePaginate(comments,{page, limit});
+
+  res.status(200).json(new ApiResponse(200, "Comments fetched successfully", result));
 });
 // Add a comment to a video
 const addComment = asyncHandler(async (req, res) => {
