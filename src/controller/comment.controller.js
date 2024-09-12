@@ -93,7 +93,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Comment not found or you are not authorized to delete it");
   }
 
-  await comment.remove();
+  await Comment.deleteOne({ _id: commentId, owner: userId });;
 
   res.status(200).json(new ApiResponse(200, "Comment deleted successfully"));
 });
